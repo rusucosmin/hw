@@ -7,9 +7,11 @@ kubectl exec -it demo-sh -- /bin/sh
 
 ## Spark on Kubernetes
 
-Steps:
+### Build the Spark image
+
 In your local spark folder, run
 ```
+cd $SPARK_HOME
 ./bin/docker-image-tool.sh -r <repo> -t latest build
 ```
 
@@ -20,11 +22,35 @@ then be pulled by the pods on the Kubernetes cluster.
 
 Our Spark version:
 ```
-Spark 2.3.2 built for Hadoop 2.7.3
 ```
 
 The corresponding Docker image file can be found
 in the `kubernetes` folder of this repository.
+
+### Push the Spark image
+
+```
+docker push <repo>
+```
+
+### Run something
+
+```
+bin/spark-submit \
+    --master k8s://https://10.90.36.16:6443 \
+    --deploy-mode cluster \
+    --name pyspark-wc \
+    --conf spark.executor.instances=5 \
+    --conf spark.kubernetes.namespace=cs449g7 \
+    --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+    --conf spark.kubernetes.driver.pod.name=cs449g7pyspark-pod \
+        --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.myvolume.options.claimName=cs449g7-scratch\
+        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.myvolume.options.claimName=cs449g7-scratch\
+    --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.myvolume.mount.path=/data \
+        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.myvolume.mount.path=/data \
+    --conf spark.kubernetes.container.image=rusucosmin/spark-py:latest \
+    local:///opt/spark/examples/src/main/python/wordcount.py /data/big.txt
+```
 
 ## CS449 2019 Project Milestone 1 Specification
 -- Parallel SGD in Spark, and experiments on Kubernetes

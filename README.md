@@ -5,6 +5,27 @@ kubectl apply -f demo-sh.yaml
 kubectl exec -it demo-sh -- /bin/sh
 ```
 
+## Spark on Kubernetes
+
+Steps:
+In your local spark folder, run
+```
+./bin/docker-image-tool.sh -r <repo> -t latest build
+```
+
+Please substitute `<repo>` with your Docker Hub repo, like: `rusucosmin/spark`.
+
+This basically builds the Spark Docker image, that will
+then be pulled by the pods on the Kubernetes cluster.
+
+Our Spark version:
+```
+Spark 2.3.2 built for Hadoop 2.7.3
+```
+
+The corresponding Docker image file can be found
+in the `kubernetes` folder of this repository.
+
 ## CS449 2019 Project Milestone 1 Specification
 -- Parallel SGD in Spark, and experiments on Kubernetes
 

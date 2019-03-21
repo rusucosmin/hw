@@ -41,6 +41,7 @@ bin/spark-submit \
     --deploy-mode cluster \
     --name pyspark-wc \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+    —conf spark.kubernetes.container.image.pullPolicy=Always \
     --conf spark.executor.instances=5 \
     --conf spark.kubernetes.namespace=cs449g7 \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
@@ -50,8 +51,14 @@ bin/spark-submit \
     --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.myvolume.mount.path=/data \
     --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.myvolume.mount.path=/data \
     --conf spark.kubernetes.container.image=sachinbjohn/spark-py:latest \
-    local:///opt/spark/examples/src/main/python/wordcount.py /data/big.txt
+    local:///data/src/wordcount.py /data/big.txt
 ```
+
+### Copy src
+
+The script `copy_src_to_pod.sh` will copy everything under src/ folder to the scrachpad.
+
+Then, that script can be invoked by the spark-submit script.
 
 ## CS449 2019 Project Milestone 1 Specification
 -- Parallel SGD in Spark, and experiments on Kubernetes

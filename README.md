@@ -42,7 +42,7 @@ bin/spark-submit \
     --deploy-mode cluster \
     --name pyspark-wc \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-    —conf spark.kubernetes.container.image.pullPolicy=Always \
+    --conf spark.kubernetes.container.image.pullPolicy=Always \
     --conf spark.executor.instances=5 \
     --conf spark.kubernetes.namespace=cs449g7 \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \

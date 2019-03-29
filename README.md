@@ -22,6 +22,7 @@ then be pulled by the pods on the Kubernetes cluster.
 
 Our Spark version:
 ```
+Spark 2.4.0 built for Hadoop 2.7.3
 ```
 
 The corresponding Docker image file can be found

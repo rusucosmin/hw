@@ -56,7 +56,8 @@ bin/spark-submit \
 
 ### Copy src
 
-The script `copy_src_to_pod.sh` will copy everything under src/ folder to the scrachpad.
+In order to copy all the src subfolder to the cluster, run
+`make push`. This script will copy everything under src/ folder to the scrachpad.
 
 Then, that script can be invoked by the spark-submit script.
 

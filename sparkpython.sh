@@ -3,7 +3,7 @@ $SPARK_HOME/bin/spark-submit \
     --deploy-mode cluster \
     --name pyspark-wc \
     --conf spark.executor.instances=5 \
-    --conf spark.kubernetes.namespace=cs449 \
+    --conf spark.kubernetes.namespace=cs449g7 \
     --conf spark.kubernetes.driver.pod.name=pyspark-pod \
 	--conf spark.kubernetes.driver.volumes.persistentVolumeClaim.myvolume.options.claimName=cs449-scratch\
 	--conf spark.kubernetes.executor.volumes.persistentVolumeClaim.myvolume.options.claimName=cs449-scratch\

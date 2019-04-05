@@ -45,6 +45,6 @@ if __name__ == "__main__":
     join_df.printSchema()
 
     join_df = join_df.groupBy(['reuters_id', 'values']).agg({'target': 'sum'})
-    print('Vectors train count: {}'.format(join_df.count()))
+    print('Join count: {}'.format(join_df.count()))
 
     spark.stop()

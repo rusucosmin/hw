@@ -37,6 +37,7 @@ docker push <repo>
 ### Run something
 
 ```
+kubectl delete pod pyspark-wc
 bin/spark-submit \
     --master k8s://https://10.90.36.16:6443 \
     --deploy-mode cluster \

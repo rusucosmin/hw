@@ -4,22 +4,23 @@ import sys
 from operator import add
 
 from pyspark.sql import SparkSession
+import os
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: wordcount <file>", file=sys.stderr)
-        sys.exit(-1)
+    DATASET_DIR = '/data/datasets/'
+    TOPICS_FILE = os.join(DATASET_DIR, 'rcv1-v2.topics.qrels')
 
     spark = SparkSession\
         .builder\
-        .appName("PythonWordCount")\
+        .appName("PysparkHogwildV1")\
         .getOrCreate()
 
-    lines = spark.read.text(sys.argv[1]).rdd.map(lambda r: r[0])
+    lines = spark.read.text(TOPICS_FILE).rdd.map(lambda r: r[0])
     counts = lines.flatMap(lambda x: x.split(' ')) \
                   .map(lambda x: (x, 1)) \
                   .reduceByKey(add)
+
     output = counts.collect()
     for (word, count) in output:
         print("%s: %i" % (word, count))

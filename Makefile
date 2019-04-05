@@ -1,3 +1,5 @@
+all: clean submit
+
 push:
 	kubectl cp $(wildcard src/*) cs449g7/demo-sh:/data/src
 

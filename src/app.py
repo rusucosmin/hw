@@ -9,20 +9,16 @@ import os
 
 if __name__ == "__main__":
     DATASET_DIR = '/data/datasets/'
-    TOPICS_FILE = os.join(DATASET_DIR, 'rcv1-v2.topics.qrels')
+    TOPICS_FILE = os.path.join(DATASET_DIR, 'rcv1-v2.topics.qrels')
+    VECTORS_TRAIN_FILE = os.path.join(DATASET_DIR, 'lyrl2004_vectors_train.dat')
 
     spark = SparkSession\
         .builder\
         .appName("PysparkHogwildV1")\
         .getOrCreate()
 
-    lines = spark.read.text(TOPICS_FILE).rdd.map(lambda r: r[0])
-    counts = lines.flatMap(lambda x: x.split(' ')) \
-                  .map(lambda x: (x, 1)) \
-                  .reduceByKey(add)
-
-    output = counts.collect()
-    for (word, count) in output:
-        print("%s: %i" % (word, count))
+    topic_rid_rdd = spark.read.text(TOPICS_FILE).rdd
+    print(topic_rid_rdd.count())
+    print(topic_rid_rdd.take(10))
 
     spark.stop()

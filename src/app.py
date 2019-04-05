@@ -18,7 +18,11 @@ if __name__ == "__main__":
         .getOrCreate()
 
     topic_rid_rdd = spark.read.text(TOPICS_FILE).rdd
+    vectors_train_rdd = spark.read.text(VECTORS_TRAIN_FILE).rdd
+
     print(topic_rid_rdd.count())
     print(topic_rid_rdd.take(10))
+    print(vectors_train_rdd.count())
+    print(vectors_train_rdd.take(10))
 
     spark.stop()

@@ -3,6 +3,7 @@
 ```
 kubectl apply -f demo-sh.yaml
 kubectl exec -it demo-sh -- /bin/sh
+kubectl logs <pod>
 ```
 
 ## Spark on Kubernetes

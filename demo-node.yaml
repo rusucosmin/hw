@@ -1,0 +1,26 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: demo-node
+spec:
+  volumes:
+    - name: demo-storage
+      persistentVolumeClaim:
+       claimName: cs449g7-scratch
+  containers:
+    - name: demo-container
+      image: node:11.6.0
+      volumeMounts:
+        - mountPath: /data
+          name: demo-storage
+      resources:
+        limits:
+          memory: 4096Mi
+          cpu: 4
+        requests:
+          memory: 4096Mi
+          cpu: 4
+      stdin: true
+      tty: true
+      command: ["/bin/sh"]
+

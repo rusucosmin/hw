@@ -11,11 +11,25 @@ def split_topic_row(r):
     sp = r.value.split()
     return (sp[1], sp[0])
 
+def from_sparse(datapoint):
+    d = {}
+    for elem in datapoint:
+      elem = elem.split(':')
+      d[int(elem[0])] = float(elem[1])
+    return d
 
 def split_vectors_train_row(r):
     sp = r.value.split()
     return (sp[0], sp[1:])
 
+def to_dict(row):
+    d = {0: 1.0}
+    for elem in row.values:
+      elem = elem.split(':')
+      d[int(elem[0])] = float(elem[1])
+    return (row.reuters_id,
+        d,
+        row['sum(target)'])
 
 if __name__ == "__main__":
     DATASET_DIR = '/data/datasets/'
@@ -45,6 +59,11 @@ if __name__ == "__main__":
     join_df.printSchema()
 
     join_df = join_df.groupBy(['reuters_id', 'values']).agg({'target': 'sum'})
+
+    join_df = join_df.rdd.map(to_dict).toDF(['reuters_id', 'values', 'target']);
+
+    join_df.printSchema()
+
     print('Join count: {}'.format(join_df.count()))
 
     spark.stop()

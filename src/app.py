@@ -31,6 +31,33 @@ def to_dict(row):
         d,
         row['sum(target)'])
 
+def get_highest_column_index(row):
+    d = row.values
+    return max(d.keys())
+
+def dot_product(xs, ys):
+    return xs.zip(ys).map(lambda xy: xy[0] * xy[1]).sum()
+
+def dot_product_sparse(dict, w):
+    return w.map(lambda w: w[0] * dict[w[1]] if dict[w[1]] else 0).sum()
+
+def dot_product_broadcast(_dict, w):
+    cost = 0
+    for i, x in enumerate(w):
+        if i in _dict:
+            cost += _dict[i] * x
+    return cost
+
+def loss(df, w_b, _lambda):
+    def loss_aux(row):
+        _dict = row.values
+        y = row.target
+        return max(0, 1 - y * dot_product_broadcast(_dict, w_b.value))
+
+    svm_loss = df.rdd.map(loss_aux).sum() / df.count()
+    reg = _lambda * sum(map(lambda x: x**2, w_b.value))
+    return svm_loss + reg
+
 if __name__ == "__main__":
     DATASET_DIR = '/data/datasets/'
     TOPICS_FILE = os.path.join(DATASET_DIR, 'rcv1-v2.topics.qrels')
@@ -41,6 +68,8 @@ if __name__ == "__main__":
         .builder\
         .appName("PysparkHogwildV1")\
         .getOrCreate()
+
+    sc = spark.sparkContext
 
     topic_rid_df = (spark.read.text(TOPICS_FILE).rdd
                     .map(split_topic_row)).toDF(['reuters_id', 'topic_tag'])
@@ -61,6 +90,20 @@ if __name__ == "__main__":
     join_df = join_df.groupBy(['reuters_id', 'values']).agg({'target': 'sum'})
 
     join_df = join_df.rdd.map(to_dict).toDF(['reuters_id', 'values', 'target']);
+
+    # Get the dimension of the sparse matrix
+    dim = join_df.rdd.map(get_highest_column_index).max()
+    # Dimension:  47236
+    print('Dimension: ', dim)
+
+    # Create & cache the Weight vector
+    W = [0.0] * dim
+
+    LAMBDA = 0.00001
+
+    W_b = sc.broadcast(W)
+
+    print("Loss: ", loss(join_df, W_b, LAMBDA))
 
     join_df.printSchema()
 

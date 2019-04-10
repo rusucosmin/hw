@@ -5,7 +5,8 @@ from operator import add
 
 from pyspark.sql import SparkSession
 import os
-
+import random
+import logging
 
 def split_topic_row(r):
     sp = r.value.split()
@@ -35,13 +36,7 @@ def get_highest_column_index(row):
     d = row.values
     return max(d.keys())
 
-def dot_product(xs, ys):
-    return xs.zip(ys).map(lambda xy: xy[0] * xy[1]).sum()
-
-def dot_product_sparse(dict, w):
-    return w.map(lambda w: w[0] * dict[w[1]] if dict[w[1]] else 0).sum()
-
-def dot_product_broadcast(_dict, w):
+def dot_product(_dict, w):
     cost = 0
     for i, x in enumerate(w):
         if i in _dict:
@@ -54,7 +49,7 @@ def loss(sc, df, w, _lambda):
     def loss_aux(row):
         _dict = row.values
         y = row.target
-        return max(0, 1 - y * dot_product_broadcast(_dict, w_b.value))
+        return max(0, 1 - y * dot_product(_dict, w_b.value))
 
     svm_loss = df.rdd.map(loss_aux).sum() / df.count()
     reg = _lambda * sum(map(lambda x: x**2, w_b.value))
@@ -78,7 +73,7 @@ if __name__ == "__main__":
     vectors_train_df = (spark.read.text(VECTORS_TRAIN_FILE).rdd
                         .map(split_vectors_train_row)).toDF(['reuters_id', 'values'])
 
-    print('Vectors train count: {}'.format(vectors_train_df.count()))
+    #print('Vectors train count: {}'.format(vectors_train_df.count()))
 
     join_df = \
         topic_rid_df.join(vectors_train_df, ['reuters_id'])
@@ -96,17 +91,51 @@ if __name__ == "__main__":
     # Get the dimension of the sparse matrix
     dim = join_df.rdd.map(get_highest_column_index).max()
     # Dimension:  47236
-    print('Dimension: ', dim)
+    # print('Dimension: ', dim)
 
-    # Create & cache the Weight vector
-    W = [0.0] * dim
+    # Create the Weight vector
+    w = [0.0] * dim
 
     LAMBDA = 0.00001
 
-    print("Loss: ", loss(sc, join_df, W, LAMBDA))
+    #print("Loss: ", loss(sc, join_df, W, LAMBDA))
 
-    join_df.printSchema()
+    #join_df.printSchema()
 
-    print('Join count: {}'.format(join_df.count()))
+    #print('Join count: {}'.format(join_df.count()))
 
+    N = 5 #number of partitions
+
+    def sgd(iterable, w_b):
+        w = w_b.value
+        x = random.choice(list(iterable))
+        row = x[1]
+        x = row.values
+        label = row.target
+        if label == 0:
+          label = -1
+        xw = dot_product(x, w)
+        regularizer = 2 * 0.00001 * sum([w[i] for i in x.keys()]) / len(x)
+        if xw * label < 1:
+          # misclassified
+          #__gradient
+          delta_w = { k: (v * label - regularizer) for k, v in x.items() }
+        else:
+          #__regularization_gradient
+          delta_w = { k: regularizer for k in x.keys() }
+        return [delta_w]
+
+    p = (join_df.rdd.zipWithIndex().map(lambda x: (x[1], x[0]))
+          .partitionBy(N))
+
+    EPOCHS = 5
+    learning_rate = 0.03 /  N
+    logging.basicConfig(filename='/data/log', level=logging.WARNING)
+    for epoch in range(EPOCHS):
+        logging.warning("EPOCH {}".format(epoch))
+        w_b = sc.broadcast(w)
+        for delta_w in (p.mapPartitions(lambda x: sgd(x, w_b)).collect()):
+            for k, v in delta_w.items():
+                w[k] += learning_rate * v
+        logging.warning("LOSS {}".format(loss(sc, join_df, w, LAMBDA)))
     spark.stop()

@@ -48,7 +48,9 @@ def dot_product_broadcast(_dict, w):
             cost += _dict[i] * x
     return cost
 
-def loss(df, w_b, _lambda):
+def loss(sc, df, w, _lambda):
+    w_b = sc.broadcast(w)
+
     def loss_aux(row):
         _dict = row.values
         y = row.target
@@ -101,9 +103,7 @@ if __name__ == "__main__":
 
     LAMBDA = 0.00001
 
-    W_b = sc.broadcast(W)
-
-    print("Loss: ", loss(join_df, W_b, LAMBDA))
+    print("Loss: ", loss(sc, join_df, W, LAMBDA))
 
     join_df.printSchema()
 

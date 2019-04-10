@@ -7,6 +7,8 @@ from pyspark.sql import SparkSession
 import os
 import random
 import logging
+import time
+
 
 def split_topic_row(r):
     sp = r.value.split()
@@ -128,14 +130,14 @@ if __name__ == "__main__":
     p = (join_df.rdd.zipWithIndex().map(lambda x: (x[1], x[0]))
           .partitionBy(N))
 
-    EPOCHS = 5
+    EPOCHS = 1000
     learning_rate = 0.03 /  N
     logging.basicConfig(filename='/data/log', level=logging.WARNING)
     for epoch in range(EPOCHS):
-        logging.warning("EPOCH {}".format(epoch))
+        logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         w_b = sc.broadcast(w)
         for delta_w in (p.mapPartitions(lambda x: sgd(x, w_b)).collect()):
             for k, v in delta_w.items():
                 w[k] += learning_rate * v
-        logging.warning("LOSS {}".format(loss(sc, join_df, w, LAMBDA)))
+        logging.warning("{}:LOSS:{}".format(int(time.time()), loss(sc, join_df, w, LAMBDA)))
     spark.stop()

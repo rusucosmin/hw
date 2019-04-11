@@ -100,10 +100,10 @@ if __name__ == "__main__":
     # Create the Weight vector
     w = [0.0] * dim
 
-    N = 3  # number of partitions
+    N = 1  # number of partitions
     LAMBDA = 0.00001 # lambda for regularization
     EPOCHS = 1000 # number of epochs to train
-    LEARNING_RATE = 0.03 / N # learning rate
+    LEARNING_RATE = 0.1 / N # learning rate
 
     #print("Loss: ", loss(sc, join_df, W, LAMBDA))
     #join_df.printSchema()
@@ -138,9 +138,16 @@ if __name__ == "__main__":
     for epoch in range(EPOCHS):
         logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         w_b = sc.broadcast(w)
+        total_delta_w = {}
         for delta_w in (p.mapPartitions(lambda x: sgd(x, w_b)).collect()):
             for k, v in delta_w.items():
-                w[k] += LEARNING_RATE * v
+                if k in total_delta_w:
+                    total_delta_w[k] += v
+                else:
+                    total_delta_w[k] = v
+
+        for k, v in total_delta_w.items():
+            w[k] += LEARNING_RATE * (v / N)
 
         logging.warning("{}:LOSS:{}".format(int(time.time()), loss(sc, val_df, w, LAMBDA)))
 

@@ -38,12 +38,8 @@ def get_highest_column_index(row):
     d = row.values
     return max(d.keys())
 
-def dot_product(_dict, w):
-    cost = 0
-    for i, x in enumerate(w):
-        if i in _dict:
-            cost += _dict[i] * x
-    return cost
+def dot_product(x, w):
+    return sum([v * w[k] for k, v in x.items()])
 
 def loss(sc, df, w, _lambda):
     w_b = sc.broadcast(w)
@@ -51,6 +47,10 @@ def loss(sc, df, w, _lambda):
     def loss_aux(row):
         _dict = row.values
         y = row.target
+        if y == 0:
+          y = -1
+        else:
+          y = 1
         return max(0, 1 - y * dot_product(_dict, w_b.value))
 
     svm_loss = df.rdd.map(loss_aux).sum() / df.count()
@@ -91,22 +91,21 @@ if __name__ == "__main__":
     join_df = join_df.rdd.map(to_dict).toDF(['reuters_id', 'values', 'target']);
 
     # Get the dimension of the sparse matrix
-    dim = join_df.rdd.map(get_highest_column_index).max()
+    dim = join_df.rdd.map(get_highest_column_index).max() + 1
     # Dimension:  47236
     # print('Dimension: ', dim)
 
     # Create the Weight vector
     w = [0.0] * dim
 
-    LAMBDA = 0.00001
+    N = 5  # number of partitions
+    LAMBDA = 0.00001 # lambda for regularization
+    EPOCHS = 1000 # number of epochs to train
+    LEARNING_RATE = 0.01 # learning rate
 
     #print("Loss: ", loss(sc, join_df, W, LAMBDA))
-
     #join_df.printSchema()
-
     #print('Join count: {}'.format(join_df.count()))
-
-    N = 5 #number of partitions
 
     def sgd(iterable, w_b):
         w = w_b.value
@@ -116,6 +115,8 @@ if __name__ == "__main__":
         label = row.target
         if label == 0:
           label = -1
+        else:
+          label = 1
         xw = dot_product(x, w)
         regularizer = 2 * 0.00001 * sum([w[i] for i in x.keys()]) / len(x)
         if xw * label < 1:
@@ -130,14 +131,14 @@ if __name__ == "__main__":
     p = (join_df.rdd.zipWithIndex().map(lambda x: (x[1], x[0]))
           .partitionBy(N))
 
-    EPOCHS = 1000
-    learning_rate = 0.03 /  N
-    logging.basicConfig(filename='/data/log', level=logging.WARNING)
+    logging.basicConfig(filename='/data/log_{}_{}.txt'.format(N, int(time.time())), level=logging.WARNING)
+
     for epoch in range(EPOCHS):
         logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         w_b = sc.broadcast(w)
         for delta_w in (p.mapPartitions(lambda x: sgd(x, w_b)).collect()):
             for k, v in delta_w.items():
-                w[k] += learning_rate * v
+                w[k] += LEARNING_RATE * v
         logging.warning("{}:LOSS:{}".format(int(time.time()), loss(sc, join_df, w, LAMBDA)))
+
     spark.stop()

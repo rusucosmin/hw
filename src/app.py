@@ -90,6 +90,8 @@ if __name__ == "__main__":
 
     join_df = join_df.rdd.map(to_dict).toDF(['reuters_id', 'values', 'target']);
 
+    val_df, train_df = join_df.randomSplit([0.1, 0.9], 24)
+
     # Get the dimension of the sparse matrix
     dim = join_df.rdd.map(get_highest_column_index).max() + 1
     # Dimension:  47236
@@ -98,10 +100,10 @@ if __name__ == "__main__":
     # Create the Weight vector
     w = [0.0] * dim
 
-    N = 5  # number of partitions
+    N = 3  # number of partitions
     LAMBDA = 0.00001 # lambda for regularization
     EPOCHS = 1000 # number of epochs to train
-    LEARNING_RATE = 0.01 # learning rate
+    LEARNING_RATE = 0.03 / N # learning rate
 
     #print("Loss: ", loss(sc, join_df, W, LAMBDA))
     #join_df.printSchema()
@@ -128,7 +130,7 @@ if __name__ == "__main__":
           delta_w = { k: regularizer for k in x.keys() }
         return [delta_w]
 
-    p = (join_df.rdd.zipWithIndex().map(lambda x: (x[1], x[0]))
+    p = (train_df.rdd.zipWithIndex().map(lambda x: (x[1], x[0]))
           .partitionBy(N))
 
     logging.basicConfig(filename='/data/log_{}_{}.txt'.format(N, int(time.time())), level=logging.WARNING)
@@ -139,6 +141,7 @@ if __name__ == "__main__":
         for delta_w in (p.mapPartitions(lambda x: sgd(x, w_b)).collect()):
             for k, v in delta_w.items():
                 w[k] += LEARNING_RATE * v
-        logging.warning("{}:LOSS:{}".format(int(time.time()), loss(sc, join_df, w, LAMBDA)))
+
+        logging.warning("{}:LOSS:{}".format(int(time.time()), loss(sc, val_df, w, LAMBDA)))
 
     spark.stop()

@@ -10,7 +10,7 @@ submit:
 			--name pyspark-hw-m1\
 			--conf spark.kubernetes.authenticate.driver.serviceAccountName=spark\
 			--conf spark.kubernetes.container.image.pullPolicy=Always\
-			--conf spark.executor.instances=5\
+			--conf spark.executor.instances=3\
 			--conf spark.kubernetes.namespace=cs449g7\
 			--conf spark.kubernetes.container.image.pullPolicy=Always\
 			--conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \

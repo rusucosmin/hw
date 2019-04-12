@@ -53,7 +53,7 @@ def main():
 
         # Update weights
         for k, v in total_delta_w.items():
-            w[k] += LEARNING_RATE * v  # LEARNING_RATE * (v / N)
+            w[k] += LEARNING_RATE * v
 
         val_loss = loss(val_df, w)
         logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))

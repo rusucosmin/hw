@@ -2,7 +2,7 @@ import os
 
 PARTITIONS = 5  # Number of partitions
 REG_LAMBDA = 1e-5  # Lambda for regularization
-EPOCHS = 1000  # Number of epochs to train
+EPOCHS = 100  # Number of epochs to train
 BATCH = 100  # Batch size
 PERSISTENCE = 15  # Number of epochs of no change in loss as a stopping criteria
 LEARNING_RATE = 0.03 * (100 / BATCH) / PARTITIONS  # Learning rate

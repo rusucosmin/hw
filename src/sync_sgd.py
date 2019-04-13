@@ -13,7 +13,7 @@ import time
 # 1. Early stopping based on persistence
 # 2. Improve logging
 # 3. Increase resources
-# 4. Train and test accuracy
+# 4. Test accuracy
 
 # Setup Spark
 spark = SparkSession\
@@ -46,7 +46,6 @@ def main():
                              .partitionBy(PARTITIONS)
 
     for epoch in range(EPOCHS):
-        logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         # Broadcast w to make it available for each worker
         w_b = sc.broadcast(w)
         # Calculate Mini Batch Gradient Descent for each partition
@@ -66,7 +65,11 @@ def main():
             w[k] += LEARNING_RATE * v
 
         val_loss = loss(val_df, w)
-        logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
+        if epoch % 100 == 0:
+            logging.warning("{}:EPOCH:{}".format(
+                int(time.time()), epoch))
+            logging.warning("{}:VAL. LOSS:{}".format(
+                int(time.time()), val_loss))
 
     # test_df = data.load_test(spark)
     # test_accuracy = accuracy(test_df, w)

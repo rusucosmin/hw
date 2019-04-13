@@ -2,17 +2,16 @@ from __future__ import print_function
 
 from pyspark.sql import SparkSession
 
-from settings import (PARTITIONS, REG_LAMBDA, EPOCHS, BATCH, LEARNING_RATE)
+from settings import (PARTITIONS, PERSISTENCE, REG_LAMBDA,
+                      EPOCHS, BATCH, LEARNING_RATE)
 import data
 
 import random
 import logging
+import math
 from time import time
 from datetime import datetime
 import json
-
-# TODO
-# 1. Early stopping based on persistence
 
 # Setup Spark
 spark = SparkSession\
@@ -47,9 +46,10 @@ def main():
 
     logs['start-compute-time'] = now()
     logging.warning("{}:Starting SGD...".format(logs['start-compute-time']))
+    persistence = [0] * PERSISTENCE
+    smallest_val_loss = math.inf
     for epoch in range(EPOCHS):
-        logging.warning("{}:EPOCH:{}".format(
-            now(), epoch))
+        logging.warning("{}:EPOCH:{}".format(now(), epoch))
         # Broadcast w to make it available for each worker
         w_b = sc.broadcast(w)
         # Calculate Mini Batch Gradient Descent for each partition
@@ -70,6 +70,14 @@ def main():
 
         val_loss = loss(val_collected, w)
         logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
+
+        # Early stopping criteria
+        smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
+        persistence[epoch % PERSISTENCE] = val_loss
+        if smallest_val_loss < min(persistence):
+            # Early stop
+            logging.warning("{}:EARLY STOP!".format(now()))
+            break
 
     logs['end-compute-time'] = now()
 

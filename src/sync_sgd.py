@@ -43,7 +43,7 @@ def main():
                              .map(lambda x: (x[1], x[0])) \
                              .partitionBy(PARTITIONS)
 
-    persistence = [0] * PERSISTENCE
+    persistence = [0.0] * PERSISTENCE
     smallest_val_loss = float('inf')
 
     logs['start-compute-time'] = now()
@@ -77,12 +77,13 @@ def main():
         logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
 
         # Early stopping criteria
-        smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
         persistence[epoch % PERSISTENCE] = val_loss
         if smallest_val_loss < min(persistence):
             # Early stop
             logging.warning("{}:EARLY STOP!".format(now()))
             break
+        else:
+            smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
 
     logs['end-compute-time'] = now()
 

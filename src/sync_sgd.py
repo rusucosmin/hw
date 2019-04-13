@@ -47,7 +47,10 @@ def main():
 
     logs['start-compute-time'] = now()
     logging.warning("{}:Starting SGD...".format(logs['start-compute-time']))
+
+    logs['epochs-stats'] = []
     for epoch in range(EPOCHS):
+        epoch_stat = {'epoch_number': epoch, 'epoch_start': now()}
         logging.warning("{}:EPOCH:{}".format(
             now(), epoch))
         # Broadcast w to make it available for each worker
@@ -69,6 +72,9 @@ def main():
             w[k] += LEARNING_RATE * v
 
         val_loss = loss(val_collected, w)
+        epoch_stat['val_loss'] = val_loss
+        epoch_stat['epoch_end'] = now()
+        logs['epochs-stats'].append(epoch_stat)
         logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
 
     logs['end-compute-time'] = now()

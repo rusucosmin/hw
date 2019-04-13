@@ -1,7 +1,7 @@
 from settings import (DATASET_DIR, TOPICS_FILE, TRAIN_FILE, VAL_SPLIT)
 
 
-def load(spark):
+def load_train(spark):
     # Read topics dataset
     topics_df = (spark.read.text(TOPICS_FILE).rdd
                  .map(split_topic_row)).toDF(['reuters_id', 'topic_tag'])

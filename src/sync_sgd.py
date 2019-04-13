@@ -8,7 +8,6 @@ import data
 
 import random
 import logging
-import math
 from time import time
 from datetime import datetime
 import json
@@ -45,7 +44,7 @@ def main():
                              .partitionBy(PARTITIONS)
 
     persistence = [0] * PERSISTENCE
-    smallest_val_loss = math.inf
+    smallest_val_loss = float('inf')
 
     logs['start-compute-time'] = now()
     logging.warning("{}:Starting SGD...".format(logs['start-compute-time']))

@@ -11,9 +11,8 @@ import time
 import datetime
 import json
 # TODO
-# 1. Test accuracy
-# 2. Early stopping based on persistence
-# 3. Improve logging
+# 1. Early stopping based on persistence
+# 2. Improve logging
 
 # Setup Spark
 spark = SparkSession\
@@ -24,17 +23,18 @@ sc = spark.sparkContext
 
 
 def main():
-    logs  = {'start-time': datetime.datetime.now()}
+    logs  = {'start-time': datetime.datetime.utcnow()}
     START_TIME = time.time()
     # Logging configuration
     logging.basicConfig(filename='/data/logs/log_{}_{}.txt'.
-                        format(PARTITIONS, int(time.time())), level=logging.WARNING)
+                        format(PARTITIONS, datetime.datetime.utcnow()), level=logging.WARNING)
 
     spark_conf = sc._conf.getAll()
 
     logging.warning("SPARK:{}".format(spark_conf))
 
     # Load data
+    logging.warning("{}:Loading Training Data...".format(datetime.datetime.utcnow()))
     time_bef = time.time()
     val_df, train_df = data.load_train(spark)
     logs['load-time'] = time.time() - time_bef
@@ -54,9 +54,10 @@ def main():
     partitions = train_df.rdd.zipWithIndex() \
                              .map(lambda x: (x[1], x[0])) \
                              .partitionBy(PARTITIONS)
-    logs['start-compute-time'] = datetime.datetime.now()
+    logs['start-compute-time'] = datetime.datetime.utcnow()
+    logging.warning("{}:Starting SGD...".format(logs['start-compute-time']))
     for epoch in range(EPOCHS):
-        logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
+        logging.warning("{}:EPOCH:{}".format(datetime.datetime.utcnow(), epoch))
         # Broadcast w to make it available for each worker
         w_b = sc.broadcast(w)
         # Calculate Mini Batch Gradient Descent for each partition
@@ -76,21 +77,27 @@ def main():
             w[k] += LEARNING_RATE * v
 
         val_loss = loss(val_collected, w)
-        logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
-    logs['end-compute-time'] = datetime.datetime.now()
+        logging.warning("{}:VAL. LOSS:{}".format(datetime.datetime.utcnow(), val_loss))
+    logs['end-compute-time'] = datetime.datetime.utcnow()
 
     # test_df = data.load_test(spark)
     # test_accuracy = accuracy(test_df, w)
-    # logging.warning("{}:TEST ACC:{}".format(int(time.time()), test_accuracy))
+    # logging.warning("{}:TEST ACC:{}".format(datetime.datetime.utcnow(), test_accuracy))
     time_bef = time.time()
+    logging.warning("{}:Calculating Train Accuracy".format(datetime.datetime.utcnow()))
     train_accuracy = accuracy(train_df, w)
     logs['accuracy_compute_time'] = time.time() - time_bef
     logs['train_accuracy'] = train_accuracy
 
-    logging.warning("{}:TRAIN ACC:{}".format(int(time.time()), train_accuracy))
+    logging.warning("{}:TRAIN ACC:{}".format(datetime.datetime.utcnow(), train_accuracy))
+
+    logging.warning("{}:Calculating Test Accuracy".format(datetime.datetime.utcnow()))
+    test_df = data.load_test(spark)
+    test_accuracy = accuracy(test_df, w)
+    logging.warning("{}:TEST ACC:{}".format(datetime.datetime.utcnow(), test_accuracy))
 
     spark.stop()
-    logs['end_time'] = datetime.datetime.now()
+    logs['end_time'] = datetime.datetime.utcnow()
     with open('/data/logs/logs.workers_{}.batch_{}.epochs_{}.time_{}.json'\
         .format(PARTITIONS, BATCH, EPOCHS, logs['start-time']),
         'w') as f:

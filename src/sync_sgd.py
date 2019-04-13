@@ -7,12 +7,12 @@ import data
 
 import random
 import logging
-import time
-import datetime
+from time import time
+from datetime import datetime
 import json
+
 # TODO
 # 1. Early stopping based on persistence
-# 2. Improve logging
 
 # Setup Spark
 spark = SparkSession\
@@ -23,27 +23,17 @@ sc = spark.sparkContext
 
 
 def main():
-    logs  = {'start-time': datetime.datetime.utcnow()}
-    START_TIME = time.time()
+    logs = {'start-time': now()}
     # Logging configuration
-    logging.basicConfig(filename='/data/logs/log_{}_{}.txt'.
-                        format(PARTITIONS, datetime.datetime.utcnow()), level=logging.WARNING)
+    logging.basicConfig(
+        filename='/data/logs/log_{}_{}.txt'.format(PARTITIONS, now()), level=logging.WARNING)
 
-    spark_conf = sc._conf.getAll()
-
-    logging.warning("SPARK:{}".format(spark_conf))
-
+    logging.warning("{}:Loading Training Data...".format(now()))
     # Load data
-    logging.warning("{}:Loading Training Data...".format(datetime.datetime.utcnow()))
-    time_bef = time.time()
     val_df, train_df = data.load_train(spark)
-    logs['load-time'] = time.time() - time_bef
 
-    # collect validation for loss computation
-    time_bef = time.time()
+    # Collect validation for loss computation
     val_collected = val_df.collect()
-    logs['collect-time'] = time.time() - time_bef
-
 
     # Create initial weight vector
     dimensions = train_df.rdd \
@@ -54,10 +44,12 @@ def main():
     partitions = train_df.rdd.zipWithIndex() \
                              .map(lambda x: (x[1], x[0])) \
                              .partitionBy(PARTITIONS)
-    logs['start-compute-time'] = datetime.datetime.utcnow()
+
+    logs['start-compute-time'] = now()
     logging.warning("{}:Starting SGD...".format(logs['start-compute-time']))
     for epoch in range(EPOCHS):
-        logging.warning("{}:EPOCH:{}".format(datetime.datetime.utcnow(), epoch))
+        logging.warning("{}:EPOCH:{}".format(
+            now(), epoch))
         # Broadcast w to make it available for each worker
         w_b = sc.broadcast(w)
         # Calculate Mini Batch Gradient Descent for each partition
@@ -77,31 +69,31 @@ def main():
             w[k] += LEARNING_RATE * v
 
         val_loss = loss(val_collected, w)
-        logging.warning("{}:VAL. LOSS:{}".format(datetime.datetime.utcnow(), val_loss))
-    logs['end-compute-time'] = datetime.datetime.utcnow()
+        logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
 
-    # test_df = data.load_test(spark)
-    # test_accuracy = accuracy(test_df, w)
-    # logging.warning("{}:TEST ACC:{}".format(datetime.datetime.utcnow(), test_accuracy))
-    time_bef = time.time()
-    logging.warning("{}:Calculating Train Accuracy".format(datetime.datetime.utcnow()))
+    logs['end-compute-time'] = now()
+
+    logging.warning("{}:Calculating Train Accuracy".format(now()))
     train_accuracy = accuracy(train_df, w)
-    logs['accuracy_compute_time'] = time.time() - time_bef
     logs['train_accuracy'] = train_accuracy
 
-    logging.warning("{}:TRAIN ACC:{}".format(datetime.datetime.utcnow(), train_accuracy))
+    logging.warning("{}:TRAIN ACC:{}".format(now(), train_accuracy))
 
-    logging.warning("{}:Calculating Test Accuracy".format(datetime.datetime.utcnow()))
+    logging.warning("{}:Calculating Test Accuracy".format(now()))
     test_df = data.load_test(spark)
     test_accuracy = accuracy(test_df, w)
-    logging.warning("{}:TEST ACC:{}".format(datetime.datetime.utcnow(), test_accuracy))
+    logs['test_accuracy'] = test_accuracy
+
+    logging.warning("{}:TEST ACC:{}".format(now(), test_accuracy))
 
     spark.stop()
-    logs['end_time'] = datetime.datetime.utcnow()
-    with open('/data/logs/logs.workers_{}.batch_{}.epochs_{}.time_{}.json'\
-        .format(PARTITIONS, BATCH, EPOCHS, logs['start-time']),
-        'w') as f:
+
+    logs['end_time'] = now()
+    with open('/data/logs/logs.workers_{}.batch_{}.epochs_{}.time_{}.json'
+              .format(PARTITIONS, BATCH, EPOCHS, logs['start-time']),
+              'w') as f:
         json.dump([logs], f)
+
 
 def sgd(train, w_b):
     w = w_b.value
@@ -161,6 +153,10 @@ def accuracy(df, w):
           .map(lambda row: int(row.target == sign(dot_product(row.features, w))))
 
     return float(predictions_rdd.sum()) / float(predictions_rdd.count())
+
+
+def now():
+    return datetime.utcfromtimestamp(time()).strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
 if __name__ == "__main__":

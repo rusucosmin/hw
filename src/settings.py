@@ -1,6 +1,6 @@
 import os
 
-PARTITIONS = 5  # Number of partitions
+PARTITIONS = 3  # Number of partitions
 REG_LAMBDA = 1e-5  # Lambda for regularization
 EPOCHS = 200  # Number of epochs to train
 BATCH = 100  # Batch size

@@ -1,6 +1,6 @@
 WORKERS := 5
 
-all: push clean submit
+all: push clean submit pull
 
 push:
 	kubectl cp src cs449g7/demo-sh:/data
@@ -30,4 +30,4 @@ submit:
 clean:
 	kubectl delete pod pyspark-hw-m1
 pull:
-	kubectl cp cs449g7/demo-sh:/data/logs logs/
+	kubectl cp cs449g7/demo-sh:/data/logs logs

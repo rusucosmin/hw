@@ -11,6 +11,8 @@ submit:
 			--py-files local:///data/src/data.py,local:///data/src/settings.py\
 			--deploy-mode cluster\
 			--name pyspark-hw-m1\
+			--driver-memory 20g\
+			--executor-memory 4g\
 			--conf spark.kubernetes.authenticate.driver.serviceAccountName=spark\
 			--conf spark.kubernetes.container.image.pullPolicy=Always\
 			--conf spark.executor.instances=$(WORKERS)\

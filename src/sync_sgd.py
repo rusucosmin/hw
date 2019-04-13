@@ -10,9 +10,8 @@ import logging
 import time
 
 # TODO
-# 1. Test accuracy
-# 2. Early stopping based on persistence
-# 3. Improve logging
+# 1. Early stopping based on persistence
+# 2. Improve logging
 
 # Setup Spark
 spark = SparkSession\
@@ -27,13 +26,9 @@ def main():
     logging.basicConfig(filename='/data/log_{}_{}.txt'.
                         format(PARTITIONS, int(time.time())), level=logging.WARNING)
 
-    spark_conf = sc._conf.getAll()
-
-    logging.warning("SPARK:{}".format(spark_conf))
-
-    # Load data
+    logging.warning("{}:Loading Training Data...".format(int(time.time())))
+    # Load training data
     val_df, train_df = data.load_train(spark)
-
     val_collected = val_df.collect()
 
     # Create initial weight vector
@@ -46,6 +41,7 @@ def main():
                              .map(lambda x: (x[1], x[0])) \
                              .partitionBy(PARTITIONS)
 
+    logging.warning("{}:Starting SGD...".format(int(time.time())))
     for epoch in range(EPOCHS):
         logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         # Broadcast w to make it available for each worker
@@ -69,12 +65,14 @@ def main():
         val_loss = loss(val_collected, w)
         logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
 
-    # test_df = data.load_test(spark)
-    # test_accuracy = accuracy(test_df, w)
-    # logging.warning("{}:TEST ACC:{}".format(int(time.time()), test_accuracy))
-
+    logging.warning("{}:Calculating Train Accuracy".format(int(time.time())))
     train_accuracy = accuracy(train_df, w)
     logging.warning("{}:TRAIN ACC:{}".format(int(time.time()), train_accuracy))
+
+    logging.warning("{}:Calculating Test Accuracy".format(int(time.time())))
+    test_df = data.load_test(spark)
+    test_accuracy = accuracy(test_df, w)
+    logging.warning("{}:TEST ACC:{}".format(int(time.time()), test_accuracy))
 
     spark.stop()
 

@@ -10,10 +10,9 @@ import logging
 import time
 
 # TODO
-# 1. Early stopping based on persistence
-# 2. Test accuracy
-# 3. Speed up
-# 4. Improve logging
+# 1. Test accuracy
+# 2. Early stopping based on persistence
+# 3. Improve logging
 
 # Setup Spark
 spark = SparkSession\
@@ -35,7 +34,7 @@ def main():
     # Load data
     val_df, train_df = data.load_train(spark)
 
-    val_size = val_df.count()
+    val_collected = val_df.collect()
 
     # Create initial weight vector
     dimensions = train_df.rdd \
@@ -67,8 +66,8 @@ def main():
         for k, v in total_delta_w.items():
             w[k] += LEARNING_RATE * v
 
-    val_loss = loss(val_df, w, val_size)
-    logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
+        val_loss = loss(val_collected, w)
+        logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
 
     # test_df = data.load_test(spark)
     # test_accuracy = accuracy(test_df, w)
@@ -111,10 +110,12 @@ def sgd(train, w_b):
     return [total_delta_w]
 
 
-def loss(df, w, size):
-    svm_losses = df.rdd.map(lambda row: max(
-        0, 1 - row.target * dot_product(row.features, w))).collect()
-    svm_loss = sum(svm_losses) / size
+def loss(df_collected, w):
+    total_loss = 0
+    for row in df_collected:
+        total_loss += max(0, 1 - row.target * dot_product(row.features, w))
+
+    svm_loss = total_loss / len(df_collected)
     reg = REG_LAMBDA * sum(map(lambda x: x**2, w))
 
     return svm_loss + reg

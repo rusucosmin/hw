@@ -11,9 +11,9 @@ import time
 
 # TODO
 # 1. Early stopping based on persistence
-# 2. Improve logging
-# 3. Increase resources
-# 4. Test accuracy
+# 2. Test accuracy
+# 3. Speed up
+# 4. Improve logging
 
 # Setup Spark
 spark = SparkSession\
@@ -35,6 +35,8 @@ def main():
     # Load data
     val_df, train_df = data.load_train(spark)
 
+    val_size = val_df.count()
+
     # Create initial weight vector
     dimensions = train_df.rdd \
                          .map(lambda row: max(row.features.keys())).max() + 1
@@ -46,6 +48,7 @@ def main():
                              .partitionBy(PARTITIONS)
 
     for epoch in range(EPOCHS):
+        logging.warning("{}:EPOCH:{}".format(int(time.time()), epoch))
         # Broadcast w to make it available for each worker
         w_b = sc.broadcast(w)
         # Calculate Mini Batch Gradient Descent for each partition
@@ -64,12 +67,8 @@ def main():
         for k, v in total_delta_w.items():
             w[k] += LEARNING_RATE * v
 
-        val_loss = loss(val_df, w)
-        if epoch % 100 == 0:
-            logging.warning("{}:EPOCH:{}".format(
-                int(time.time()), epoch))
-            logging.warning("{}:VAL. LOSS:{}".format(
-                int(time.time()), val_loss))
+    val_loss = loss(val_df, w, val_size)
+    logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
 
     # test_df = data.load_test(spark)
     # test_accuracy = accuracy(test_df, w)
@@ -112,16 +111,12 @@ def sgd(train, w_b):
     return [total_delta_w]
 
 
-def loss(df, w):
-    w_b = sc.broadcast(w)
+def loss(df, w, size):
+    svm_losses = df.rdd.map(lambda row: max(
+        0, 1 - row.target * dot_product(row.features, w))).collect()
+    svm_loss = sum(svm_losses) / size
+    reg = REG_LAMBDA * sum(map(lambda x: x**2, w))
 
-    def loss_aux(row):
-        _dict = row.features
-        y = row.target
-        return max(0, 1 - y * dot_product(_dict, w_b.value))
-
-    svm_loss = df.rdd.map(loss_aux).sum() / df.count()
-    reg = REG_LAMBDA * sum(map(lambda x: x**2, w_b.value))
     return svm_loss + reg
 
 
@@ -139,7 +134,8 @@ def accuracy(df, w):
     predictions_rdd = \
         df.rdd \
           .map(lambda row: int(row.target == sign(dot_product(row.features, w))))
-    return predictions_rdd.sum() / predictions_rdd.count()
+
+    return float(predictions_rdd.sum()) / float(predictions_rdd.count())
 
 
 if __name__ == "__main__":

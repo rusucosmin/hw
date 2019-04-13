@@ -9,6 +9,12 @@ import random
 import logging
 import time
 
+# TODO
+# 1. Early stopping based on persistence
+# 2. Improve logging
+# 3. Increase resources
+# 4. Train and test accuracy
+
 # Setup Spark
 spark = SparkSession\
     .builder\
@@ -22,8 +28,12 @@ def main():
     logging.basicConfig(filename='/data/log_{}_{}.txt'.
                         format(PARTITIONS, int(time.time())), level=logging.WARNING)
 
+    spark_conf = sc._conf.getAll()
+
+    logging.warning("SPARK:{}".format(spark_conf))
+
     # Load data
-    val_df, train_df = data.load(spark)
+    val_df, train_df = data.load_train(spark)
 
     # Create initial weight vector
     dimensions = train_df.rdd \
@@ -57,6 +67,13 @@ def main():
 
         val_loss = loss(val_df, w)
         logging.warning("{}:VAL. LOSS:{}".format(int(time.time()), val_loss))
+
+    # test_df = data.load_test(spark)
+    # test_accuracy = accuracy(test_df, w)
+    # logging.warning("{}:TEST ACC:{}".format(int(time.time()), test_accuracy))
+
+    train_accuracy = accuracy(train_df, w)
+    logging.warning("{}:TRAIN ACC:{}".format(int(time.time()), train_accuracy))
 
     spark.stop()
 
@@ -107,6 +124,19 @@ def loss(df, w):
 
 def dot_product(x, w):
     return sum([v * w[k] for k, v in x.items()])
+
+
+def sign(x):
+    # Sign function
+    return 1 if x > 0 else -1 if x < 0 else 0
+
+
+def accuracy(df, w):
+    # Returns accuracy
+    predictions_rdd = \
+        df.rdd \
+          .map(lambda row: int(row.target == sign(dot_product(row.features, w))))
+    return predictions_rdd.sum() / predictions_rdd.count()
 
 
 if __name__ == "__main__":

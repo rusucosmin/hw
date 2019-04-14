@@ -1,4 +1,4 @@
-WORKERS := 5
+WORKERS := 3
 
 all: push clean submit pull
 

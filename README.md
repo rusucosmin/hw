@@ -1,11 +1,5 @@
 # Synchronous Parallel SGD in Spark
 
-## TODO
-
-* Experiments: subset sizes (500, 1000)
-* Analysis
-* Report
-
 ## Run Experiments
 
 Define number of Spark workers in the Makefile, and other hyperparameters (e.g. number of partitions) in `src/settings.py`. In general, we would like to have the same number of workers and partitions.

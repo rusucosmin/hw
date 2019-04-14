@@ -1,3 +1,4 @@
 .vscode/
 logs/*
-.ipynb_checkpoints/
+.ipynb_checkpoints
+*.pyc

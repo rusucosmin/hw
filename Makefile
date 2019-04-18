@@ -29,5 +29,9 @@ submit:
 
 clean:
 	kubectl delete pod pyspark-hw-m1
+
 pull:
 	kubectl cp cs449g7/demo-sh:/data/logs logs
+
+download-data:
+	kubectl cp cs449g7/demo-sh:/data/datasets data/datasets

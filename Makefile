@@ -3,12 +3,12 @@ WORKERS := 3
 all: push clean submit pull
 
 push:
-	kubectl cp src cs449g7/demo-sh:/data
+	kubectl cp mil-1 cs449g7/demo-sh:/data
 
 submit:
 	$(SPARK_HOME)/bin/spark-submit\
 			--master k8s://https://10.90.36.16:6443\
-			--py-files local:///data/src/data.py,local:///data/src/settings.py\
+			--py-files local:///data/mil-1/data.py,local:///data/mil-1/settings.py\
 			--deploy-mode cluster\
 			--name pyspark-hw-m1\
 			--driver-memory 20g\
@@ -25,7 +25,7 @@ submit:
 			--conf spark.kubernetes.driver.volumes.persistentVolumeClaim.myvolume.mount.path=/data\
 			--conf spark.kubernetes.executor.volumes.persistentVolumeClaim.myvolume.mount.path=/data\
 			--conf spark.kubernetes.container.image=sachinbjohn/spark-py:latest\
-			local:///data/src/sync_sgd.py
+			local:///data/mil-1/sync_sgd.py
 
 clean:
 	kubectl delete pod pyspark-hw-m1

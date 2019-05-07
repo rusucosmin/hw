@@ -18,7 +18,7 @@ def sgd(n, train, W, lock=None):
                 GLOBAL_W[n*epoch] = n+epoch
 
 
-def todo():
+def main():
     # Decide weather or not to use locks
     use_locks = False
 

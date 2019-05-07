@@ -35,6 +35,7 @@ It pushes the source code to the cluster, cleans previous job and submits a new 
 To open a shell in the cluster
 
 ```bash
+kubectl apply -f demo-sh.yaml
 kubectl exec -it demo-sh -- /bin/sh
 ```
 

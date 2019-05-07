@@ -1,7 +1,7 @@
 all: run
 
 run:
-	python master.py
+	python async_sgd.py
 
 download-data:
 	mkdir -p ../data/datasets

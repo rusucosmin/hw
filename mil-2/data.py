@@ -1,5 +1,4 @@
 from settings import (TOPICS_FILE, TRAIN_FILE, TEST_FILES, VAL_SPLIT)
-from functools import reduce
 import random
 
 
@@ -7,7 +6,7 @@ def load_train():
     # Load topics data
     with open(TOPICS_FILE) as f:
         raw_topics = f.readlines()
-        topics = reduce(preprocess_topics, {}, raw_topics)
+        topics = preprocess_topics(raw_topics)
 
     # Load training data and preprocess
     with open(TRAIN_FILE) as f:
@@ -35,7 +34,7 @@ def load_test():
     # Load topics data
     with open(TOPICS_FILE) as f:
         raw_topics = f.readlines()
-        topics = reduce(preprocess_topics, {}, raw_topics)
+        topics = preprocess_topics(raw_topics)
 
     raw_test = []
     for TEST_FILE in TEST_FILES:
@@ -48,18 +47,20 @@ def load_test():
     return test
 
 
-def preprocess_topics(row, topics):
-    # Example: "MCAT 2297 1"
-    row = row.split()
-    topic_tag = row[0]
-    reuters_id = int(row[1])
-    # Add to topics dictionary
-    if reuters_id not in topics:
-        # Initialize if the reuters id doesn't exist yet
-        topics[reuters_id] = [topic_tag]
-    else:
-        # Append tag to existing reuters id
-        topics[reuters_id].append(topic_tag)
+def preprocess_topics(raw_topics):
+    topics = {}
+    for row in raw_topics:
+        # Example: "MCAT 2297 1"
+        row = row.split()
+        topic_tag = row[0]
+        reuters_id = int(row[1])
+        # Add to topics dictionary
+        if reuters_id not in topics:
+            # Initialize if the reuters id doesn't exist yet
+            topics[reuters_id] = [topic_tag]
+        else:
+            # Append tag to existing reuters id
+            topics[reuters_id].append(topic_tag)
     return topics
 
 

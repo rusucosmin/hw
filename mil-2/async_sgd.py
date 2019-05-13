@@ -52,18 +52,18 @@ def optimizer(worker, train, val, w, lock=None):
     # TODO: The calculation of the loss and the persistence
     # should be done in a different process
     # TODO: Move code to sgd function
+    samples = list(zip(train['features'], train['targets']))
     for epoch in range(EPOCHS):
-        sgd(train, w)
+        sgd(samples, w)
         val_loss = loss(val, w)
         if epoch % 10 == 0:
             # print('[{}] Weights {}'.format(worker, w[:10]))
             print('[{}] VAL. LOSS {}'.format(worker, val_loss))
 
 
-def sgd(train, w):
+def sgd(samples, w):
     total_delta_w = {}
-    samples = list(zip(train['features'], train['targets']))
-    samples = random.sample(list(samples), BATCH)
+    samples = random.sample(samples, BATCH)
     for x, target in samples:
         # Dot product of x and w
         xw = dot_product(x, w)

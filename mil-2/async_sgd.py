@@ -49,21 +49,20 @@ def main():
 
 
 def optimizer(worker, train, val, w, lock=None):
-    # TODO: Persistence
+    # TODO: The calculation of the loss and the persistence
+    # should be done in a different process
     # TODO: Move code to sgd function
     for epoch in range(EPOCHS):
         sgd(train, w)
-        # TODO: Val should not be calcualted by each worker
         val_loss = loss(val, w)
-        if epoch % 100 == 0:
-            print('[{}] Weights {}'.format(worker, w[:10]))
+        if epoch % 10 == 0:
+            # print('[{}] Weights {}'.format(worker, w[:10]))
             print('[{}] VAL. LOSS {}'.format(worker, val_loss))
 
 
 def sgd(train, w):
     total_delta_w = {}
     samples = list(zip(train['features'], train['targets']))
-    random.seed(10)
     samples = random.sample(list(samples), BATCH)
     for x, target in samples:
         # Dot product of x and w
@@ -83,7 +82,6 @@ def sgd(train, w):
                 total_delta_w[k] += v
             else:
                 total_delta_w[k] = v
-    # TODO: LOCK or not (acquire and release)
     # Save delta weights for all the batch
     for k, v in total_delta_w.items():
         w[k] += LEARNING_RATE * v

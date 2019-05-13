@@ -28,10 +28,9 @@ def main():
         processes = []
         for worker in range(WORKERS):
             if LOCK:
-                p = Process(target=optimizer, args=(
-                    worker, train, val, w, lock))
+                p = Process(target=sgd, args=(worker, train, val, w, lock))
             else:
-                p = Process(target=optimizer, args=(worker, train, val, w))
+                p = Process(target=sgd, args=(worker, train, val, w))
             p.start()
             processes.append(p)
 
@@ -48,43 +47,40 @@ def main():
         print('Finished at {}'.format(end_time))
 
 
-def optimizer(worker, train, val, w, lock=None):
-    # TODO: The calculation of the loss and the persistence
-    # should be done in a different process
-    # TODO: Move code to sgd function
+def sgd(worker, train, val, w, lock=None):
+    # TODO: Persistence
     samples = list(zip(train['features'], train['targets']))
     for epoch in range(EPOCHS):
-        sgd(samples, w)
+        total_delta_w = {}
+        samples_batch = random.sample(samples, BATCH)
+        for x, target in samples_batch:
+            # Dot product of x and w
+            xw = dot_product(x, w)
+            regularizer = 2 * REG_LAMBDA * \
+                sum([w[i] for i in x.keys()]) / len(x)
+            if xw * target < 1:
+                # Misclassified
+                # Calculate gradient
+                delta_w = {k: (v * target - regularizer) for k, v in x.items()}
+            else:
+                # Calculate regularization gradient
+                delta_w = {k: regularizer for k in x.keys()}
+
+            # Update weights in this iteration
+            for k, v in delta_w.items():
+                if k in total_delta_w:
+                    total_delta_w[k] += v
+                else:
+                    total_delta_w[k] = v
+
+        # TODO: Update after batch or after each iteration?
+        # Save delta weights for all the batch
+        for k, v in total_delta_w.items():
+            w[k] += LEARNING_RATE * v
+
         val_loss = loss(val, w)
         if epoch % 10 == 0:
-            # print('[{}] Weights {}'.format(worker, w[:10]))
             print('[{}] VAL. LOSS {}'.format(worker, val_loss))
-
-
-def sgd(samples, w):
-    total_delta_w = {}
-    samples = random.sample(samples, BATCH)
-    for x, target in samples:
-        # Dot product of x and w
-        xw = dot_product(x, w)
-        regularizer = 2 * REG_LAMBDA * sum([w[i] for i in x.keys()]) / len(x)
-        if xw * target < 1:
-            # Misclassified
-            # Calculate gradient
-            delta_w = {k: (v * target - regularizer) for k, v in x.items()}
-        else:
-            # Calculate regularization gradient
-            delta_w = {k: regularizer for k in x.keys()}
-
-        # Update weights in this iteration
-        for k, v in delta_w.items():
-            if k in total_delta_w:
-                total_delta_w[k] += v
-            else:
-                total_delta_w[k] = v
-    # Save delta weights for all the batch
-    for k, v in total_delta_w.items():
-        w[k] += LEARNING_RATE * v
 
 
 def loss(data, w):
@@ -116,7 +112,7 @@ def accuracy(data, w):
     predictions = list(map(lambda idx: int(targets[idx] == sign(
         dot_product(features[idx], w))), range(len(features))))
 
-    return float(sum(predictions)) / float(len(predictions))
+    return sum(predictions) / len(predictions)
 
 
 def now():

@@ -11,6 +11,7 @@ import random
 
 def main():
     # TODO: Logs
+    print('LOCK: {}'.format(LOCK))
     with Manager() as manager:
         val, train = data.load_train()
         train = manager.dict(train)
@@ -19,7 +20,7 @@ def main():
 
         if LOCK:
             lock = Lock()
-            w = Array(c_double, init_w, lock=lock)
+            w = Array(c_double, init_w, lock=False)
         else:
             w = RawArray(c_double, init_w)
 
@@ -75,12 +76,16 @@ def sgd(worker, train, val, w, lock=None):
 
         # TODO: Update after batch or after each iteration?
         # Save delta weights for all the batch
+        if LOCK:
+            lock.acquire()
         for k, v in total_delta_w.items():
             w[k] += LEARNING_RATE * v
+        if LOCK:
+            lock.release()
 
         val_loss = loss(val, w)
-        if epoch % 10 == 0:
-            print('[{}] VAL. LOSS {}'.format(worker, val_loss))
+        # if epoch % 10 == 0:
+        #     print('[{}] VAL. LOSS {}'.format(worker, val_loss))
 
 
 def loss(data, w):

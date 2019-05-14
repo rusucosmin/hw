@@ -1,18 +1,30 @@
-from multiprocessing import Process, Lock, Manager
+from multiprocessing import Process, Lock, Manager, Queue
 from multiprocessing.sharedctypes import RawArray, Array
 from ctypes import c_double
-from settings import (LOCK, WORKERS, PERSISTENCE,
-                      REG_LAMBDA, EPOCHS, BATCH, LEARNING_RATE)
+from settings import (LOCK, WORKERS, PERSISTENCE, BATCH,
+                      REG_LAMBDA, EPOCHS, LEARNING_RATE)
 from time import time
 from datetime import datetime
 import data
 import random
+import logging
+import json
 
 
 def main():
-    # TODO: Logs
-    print('LOCK: {}'.format(LOCK))
+    logs = {'start-time': now(),
+            'lock': LOCK,
+            'num_workers': WORKERS,
+            'reg_lambda': REG_LAMBDA,
+            'epochs': EPOCHS,
+            'learning_rate': LEARNING_RATE}
+    # Logging configuration
+    logging.basicConfig(
+        filename='../logs/temp_logs.txt', level=logging.WARNING)
+
     with Manager() as manager:
+        logging.warning("{}:Loading Training Data...".format(now()))
+
         val, train = data.load_train()
         train = manager.dict(train)
         dim = max([max(k) for k in train['features']]) + 1
@@ -20,39 +32,88 @@ def main():
 
         if LOCK:
             lock = Lock()
-            w = Array(c_double, init_w, lock=False)
+            w = Array(c_double, init_w, lock=lock)
         else:
             w = RawArray(c_double, init_w)
 
-        start_time = now()
+        logs['start-compute-time'] = now()
+        logging.warning("{}:Starting SGD...".format(
+            logs['start-compute-time']))
 
-        processes = []
+        val_queue = Queue()
+        workers = []
         for worker in range(WORKERS):
-            if LOCK:
-                p = Process(target=sgd, args=(worker, train, val, w, lock))
-            else:
-                p = Process(target=sgd, args=(worker, train, val, w))
+            p = Process(target=sgd, args=(worker, val_queue, train, w))
             p.start()
-            processes.append(p)
+            workers.append(p)
 
-        for p in processes:
-            # Block until p is done
-            p.join()
+        logs['epochs-stats'] = []
 
-        end_time = now()
+        # Initial early stopping variables
+        persistence = [0.0] * PERSISTENCE
+        smallest_val_loss = float('inf')
+        workers_done = [False] * WORKERS
+        while True:
+            # Block until getting a message
+            item = val_queue.get()
+            action = item['action']
+            worker = item['worker']
+            if action == 'calculate_val_loss':
+                epoch = item['epoch']
+                weights = item['weights']
 
+                val_loss = loss(val, weights)
+
+                logging.warning("{}:EPOCH:{}".format(now(), epoch))
+                logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
+                logs['epochs-stats'].append({'epoch_number': epoch,
+                                             'val_loss': val_loss})
+
+                # Early stopping criteria
+                persistence[epoch % PERSISTENCE] = val_loss
+                if smallest_val_loss < min(persistence):
+                    # Early stop
+                    logging.warning("{}:EARLY STOP!".format(now()))
+                    # Terminate all workers
+                    for p in workers:
+                        p.terminate()
+                    break
+                else:
+                    smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
+            elif action == 'done':
+                workers_done[worker] = True
+                if all(workers_done):
+                    # Finish if all workers are done
+                    break
+
+        # Close queue
+        val_queue.close()
+        val_queue.join_thread()
+
+        logs['end-compute-time'] = now()
+
+        logging.warning("{}:Calculating Train Accuracy".format(now()))
         train_accuracy = accuracy(train, w)
-        print('TRAIN ACC. {}'.format(train_accuracy))
-        # TODO: Test accuracy
-        print('Started at {}'.format(start_time))
-        print('Finished at {}'.format(end_time))
+        logs['train_accuracy'] = train_accuracy
+        logging.warning("{}:TRAIN ACC:{}".format(now(), train_accuracy))
+
+        # TODO: Calculate test accuracy
+        # logging.warning("{}:Calculating Test Accuracy".format(now()))
+        # test = data.load_test()
+        # test_accuracy = accuracy(test, w)
+        # logs['test_accuracy'] = test_accuracy
+        # logging.warning("{}:TEST ACC:{}".format(now(), test_accuracy))
+
+        logs['end_time'] = now()
+        with open('../logs/logs.w_{}.l_{}.e_{}.time_{}.json'
+                  .format(WORKERS, LOCK, EPOCHS, logs['start-time']),
+                  'w') as f:
+            json.dump([logs], f)
 
 
-def sgd(worker, train, val, w, lock=None):
-    # TODO: Persistence
+def sgd(worker, val_queue, train, w):
     samples = list(zip(train['features'], train['targets']))
     for epoch in range(EPOCHS):
-        total_delta_w = {}
         samples_batch = random.sample(samples, BATCH)
         for x, target in samples_batch:
             # Dot product of x and w
@@ -67,25 +128,21 @@ def sgd(worker, train, val, w, lock=None):
                 # Calculate regularization gradient
                 delta_w = {k: regularizer for k in x.keys()}
 
-            # Update weights in this iteration
+            # Update weights
+            # If LOCK then there is a lock in the data structure Array
+            # that already handles the synchronisation.
             for k, v in delta_w.items():
-                if k in total_delta_w:
-                    total_delta_w[k] += v
-                else:
-                    total_delta_w[k] = v
+                w[k] += LEARNING_RATE * v
 
-        # TODO: Update after batch or after each iteration?
-        # Save delta weights for all the batch
-        if LOCK:
-            lock.acquire()
-        for k, v in total_delta_w.items():
-            w[k] += LEARNING_RATE * v
-        if LOCK:
-            lock.release()
-
-        val_loss = loss(val, w)
-        # if epoch % 10 == 0:
-        #     print('[{}] VAL. LOSS {}'.format(worker, val_loss))
+        # Calculate validation loss after each epoch (i.e. one batch)
+        # Put in controller's queue to calculate validation loss
+        val_queue.put_nowait({'worker': worker,
+                              'action': 'calculate_val_loss',
+                              'epoch': epoch,
+                              'weights': w[:]})
+    # Put in controller's queue to finish
+    val_queue.put_nowait({'worker': worker,
+                          'action': 'done'})
 
 
 def loss(data, w):

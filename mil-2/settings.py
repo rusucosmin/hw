@@ -5,8 +5,8 @@ LOCK = False  # Asynchronous with and without lock
 REG_LAMBDA = 1e-5  # Lambda for regularization
 EPOCHS = 1000  # Number of epochs to train
 BATCH = 100  # Batch size
-PERSISTENCE = 15  # Number of epochs of no change in loss as a stopping criteria
-LEARNING_RATE = 0.03 * (100 / BATCH) / WORKERS  # Learning rate
+PERSISTENCE = 15  # Early stopping criteria
+LEARNING_RATE = 0.03 / WORKERS  # Learning rate
 
 DATASET_DIR = '../data/datasets/'
 TOPICS_FILE = os.path.join(DATASET_DIR, 'rcv1-v2.topics.qrels')

@@ -81,6 +81,7 @@ def main():
                 else:
                     smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
             elif action == 'done':
+                logging.warning("{}:WORKER DONE!".format(now()))
                 workers_done[worker] = True
                 if all(workers_done):
                     # Finish if all workers are done

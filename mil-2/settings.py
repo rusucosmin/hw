@@ -5,7 +5,7 @@ LOCK = False  # Asynchronous with and without lock
 REG_LAMBDA = 1e-5  # Lambda for regularization
 EPOCHS = 1000  # Number of epochs to train
 BATCH = 100  # Batch size
-PERSISTENCE = 15  # Early stopping criteria
+PERSISTENCE = 60 * WORKERS  # Early stopping criteria
 LEARNING_RATE = 0.03 / WORKERS  # Learning rate
 
 DATASET_DIR = '../data/datasets/'

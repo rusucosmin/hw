@@ -22,14 +22,14 @@ sc = spark.sparkContext
 
 def main():
     logs = {'start-time': now(),
-    'num_workers': PARTITIONS,
-    'reg_lambda': REG_LAMBDA,
-    'epochs': EPOCHS,
-    'batch': BATCH,
-    'learning_rate': LEARNING_RATE}
+            'num_workers': PARTITIONS,
+            'reg_lambda': REG_LAMBDA,
+            'epochs': EPOCHS,
+            'batch': BATCH,
+            'learning_rate': LEARNING_RATE}
     # Logging configuration
     logging.basicConfig(
-        filename='/data/logs/temp_logs.txt', level=logging.WARNING)
+        filename='/data/logs/tmp_logs.txt', level=logging.WARNING)
 
     logging.warning("{}:Loading Training Data...".format(now()))
     # Load data

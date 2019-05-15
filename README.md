@@ -1,22 +1,22 @@
+# Hogwild!: Lock-free Parallel SGD
+
+## Run Experiments
+
+Define experiments in Makefile or by default in `settings.py`. Run the following for additional information:
+
+```bash
+make help
+```
+
+## Monitoring Commands
+
+There are logs for each iteration of SGD in `tmp_logs.txt`. The following command might be useful:
+
+```bash
+tail -f mil-2/logs/tmp_logs.txt
+```
+
 # Synchronous Parallel SGD in Spark
-
-
-## Milestone 2 - Multicore shared memory implementation
-
-*Deadline: May 20, 2019, 14:15.*
-
-In this milestone, we should implement the algorithm on a *single* machine in multiple
-threads or processes, and we should use a lock-free approach when writing to a shared memory,
-without any message passing and without an exclusive access mechanism to a single thread.
-
-Since Python has limitations in terms of running threads in parralel we have two
-alternatives:
-- `multiprocessing` library and its `RawArray`  data structure, which can be shared with
-child processes created with `multiprocessing.Process`;
-- an alternative Python implementation (such as Jython) which supports true thread-level
-multicore processing.
-
-Moreover, we should also compare the new system with a slightly modified version that does use locks (to prevent potentially-conflicting updates to the weight vector), and to empirically verify that the absence of locks really helps performance without compromising the overall correctness of the algorithm.
 
 ## Run Experiments
 

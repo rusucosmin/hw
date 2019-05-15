@@ -7,6 +7,7 @@ EPOCHS = 1000  # Number of epochs to train
 BATCH = 100  # Batch size
 PERSISTENCE = 60 * WORKERS  # Early stopping criteria
 LEARNING_RATE = 0.03 / WORKERS  # Learning rate
+FULL_TEST = False  # Use reduced version of test set for memory purposes
 
 DATASET_DIR = '../data/datasets/'
 TOPICS_FILE = os.path.join(DATASET_DIR, 'rcv1-v2.topics.qrels')

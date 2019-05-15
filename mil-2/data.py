@@ -30,16 +30,22 @@ def load_train():
     return val, train
 
 
-def load_test():
+def load_test(full_test):
     # Load topics data
     with open(TOPICS_FILE) as f:
         raw_topics = f.readlines()
         topics = preprocess_topics(raw_topics)
 
+    if not full_test:
+        # Load only one test set to avoid running out of memory
+        test_files = [TEST_FILES[0]]
+    else:
+        test_files = TEST_FILES
+
     raw_test = []
-    for TEST_FILE in TEST_FILES:
+    for test_file in test_files:
         # Load test data and preprocess
-        with open(TEST_FILE) as f:
+        with open(test_file) as f:
             raw_test += f.readlines()
 
     test = preprocess_data(raw_test, topics)

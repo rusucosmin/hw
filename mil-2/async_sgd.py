@@ -2,14 +2,15 @@ from multiprocessing import Process, Lock, Manager, Queue
 from multiprocessing.sharedctypes import RawArray, Array
 from ctypes import c_double
 from settings import (LOCK, WORKERS, PERSISTENCE, BATCH,
-                      REG_LAMBDA, EPOCHS, LEARNING_RATE)
+                      REG_LAMBDA, EPOCHS, LEARNING_RATE,
+                      FULL_TEST)
 from time import time
 from datetime import datetime
 import data
 import random
 import logging
 import json
-import sys
+import argparse
 
 
 def main():
@@ -21,10 +22,13 @@ def main():
             'learning_rate': LEARNING_RATE}
     # Logging configuration
     logging.basicConfig(
-        filename='../logs/temp_logs.txt', level=logging.WARNING)
+        filename='logs/tmp_logs.txt', level=logging.WARNING)
 
     with Manager() as manager:
         logging.warning("{}:Loading Training Data...".format(now()))
+        logging.warning("{}:FULL TEST {}".format(now(), FULL_TEST))
+        logging.warning("{}:WORKERS {}".format(now(), WORKERS))
+        logging.warning("{}:LOCK {}".format(now(), LOCK))
 
         val, train = data.load_train()
         train = manager.dict(train)
@@ -38,6 +42,7 @@ def main():
             w = RawArray(c_double, init_w)
 
         logs['start-compute-time'] = now()
+        start_time = time()
         logging.warning("{}:Starting SGD...".format(
             logs['start-compute-time']))
 
@@ -60,7 +65,8 @@ def main():
             if not workers_alive:
                 logging.warning("{}:WORKERS DONE!".format(now()))
                 logs['end-compute-time'] = now()
-                logging.warning("{}:END TIME".format(now()))
+                logging.warning("{}:END TIME {}".format(now(),
+                                                        time()-start_time))
             if not workers_alive and val_queue.empty():
                 logging.warning(
                     "{}:WORKERS DONE AND QUEUE EMPTY!".format(now()))
@@ -91,7 +97,8 @@ def main():
                 for p in workers:
                     p.terminate()
                 logs['end-compute-time'] = now()
-                logging.warning("{}:END TIME".format(now()))
+                logging.warning("{}:END TIME {}".format(now(),
+                                                        time()-start_time))
                 break
             else:
                 smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
@@ -105,15 +112,15 @@ def main():
         logs['train_accuracy'] = train_accuracy
         logging.warning("{}:TRAIN ACC:{}".format(now(), train_accuracy))
 
-        # TODO: Calculate test accuracy
-        # logging.warning("{}:Calculating Test Accuracy".format(now()))
-        # test = data.load_test()
-        # test_accuracy = accuracy(test, final_weights)
-        # logs['test_accuracy'] = test_accuracy
-        # logging.warning("{}:TEST ACC:{}".format(now(), test_accuracy))
+        # Calculate test accuracy
+        logging.warning("{}:Calculating Test Accuracy".format(now()))
+        test = data.load_test(FULL_TEST)
+        test_accuracy = accuracy(test, final_weights)
+        logs['test_accuracy'] = test_accuracy
+        logging.warning("{}:TEST ACC:{}".format(now(), test_accuracy))
 
         logs['end_time'] = now()
-        with open('../logs/logs.w_{}.l_{}.e_{}.time_{}.json'
+        with open('logs/logs.w_{}.l_{}.e_{}.time_{}.json'
                   .format(WORKERS, LOCK, EPOCHS, logs['start-time']),
                   'w') as f:
             json.dump([logs], f)
@@ -186,11 +193,25 @@ def now():
 
 
 if __name__ == "__main__":
-    # If arguments are given then change global variables
-    # Default arguments can be found in settings.py
-    if len(sys.argv) >= 3:
-        workers = int(sys.argv[1])
-        lock = True if sys.argv[2] == 'True' else False
-        WORKERS = workers
-        LOCK = lock
+    # Initiate the parser
+    description = 'Local implementation of Hogwild!'
+    parser = argparse.ArgumentParser(description=description)
+
+    parser.add_argument("-ft", "--full_test",
+                        help="set full test mode", action="store_true")
+    parser.add_argument("-w", "--workers",
+                        help="set number of workers")
+    parser.add_argument("-l", "--lock",
+                        help="set lock mode")
+
+    # Read arguments from the command line
+    args = parser.parse_args()
+
+    if args.full_test:
+        FULL_TEST = False
+    if args.workers:
+        WORKERS = int(args.workers)
+    if args.lock:
+        LOCK = True if args.lock.lower() == 'true' else False
+
     main()

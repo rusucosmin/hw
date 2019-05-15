@@ -64,6 +64,7 @@ def main():
             if not workers_alive and val_queue.empty():
                 logging.warning(
                     "{}:WORKERS DONE AND QUEUE EMPTY!".format(now()))
+                final_weights = w[:]
                 break
             # Block until getting a message
             val_queue_item = val_queue.get()

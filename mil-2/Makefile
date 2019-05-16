@@ -9,7 +9,7 @@ download-data: ## Downloads all necessary data ~15GB
 	kubectl cp cs449g7/demo-sh:/data/datasets ../data/datasets
 
 # Run experiments with given settings
-WORKERS = 1 2 4 5 6 7 8 9 10
+WORKERS = 1 2 3 4 5 6 7 8 9 10 
 LOCK = "False" "True"
 experiments: ## Experiments for analysis. Memory and CPU liberal
 	for w in ${WORKERS} ; do \

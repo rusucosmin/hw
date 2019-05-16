@@ -2,5 +2,4 @@
 .ipynb_checkpoints
 *.pyc
 mil-1/logs/*
-mil-2/logs/*
 data/

@@ -5,7 +5,7 @@ LOCK = False  # Asynchronous with and without lock
 REG_LAMBDA = 1e-5  # Lambda for regularization
 EPOCHS = 1000  # Number of epochs to train
 BATCH = 100  # Batch size
-PERSISTENCE = 60 * WORKERS  # Early stopping criteria
+PERSISTENCE = 100 * WORKERS  # Early stopping criteria
 LEARNING_RATE = 0.03 / WORKERS  # Learning rate
 FULL_TEST = False  # Use reduced version of test set for memory purposes
 

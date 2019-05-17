@@ -46,87 +46,40 @@ def main():
         logging.warning("{}:Starting SGD...".format(
             logs['start-compute-time']))
 
-        val_queue = Queue()
         workers = []
         for worker in range(WORKERS):
-            p = Process(target=sgd, args=(
-                worker, train, w, val_queue))
+            p = Process(target=sgd, args=(worker, train, w))
             p.start()
             workers.append(p)
 
         logs['epochs-stats'] = []
 
-        # Initial early stopping variables
-        persistence = [0.0] * PERSISTENCE
-        smallest_val_loss = float('inf')
-        workers_done = [False] * WORKERS
-        while True:
-            workers_alive = any([p.is_alive() for p in workers])
-            if not workers_alive:
-                logging.warning("{}:WORKERS DONE!".format(now()))
-                logs['end-compute-time'] = now()
-                logging.warning("{}:END TIME {}".format(now(),
-                                                        time()-start_time))
-            if not workers_alive and val_queue.empty():
-                logging.warning(
-                    "{}:WORKERS DONE AND QUEUE EMPTY!".format(now()))
-                final_weights = w[:]
-                break
-            # Block until getting a message
-            val_queue_item = val_queue.get()
-            worker = val_queue_item['worker']
-            epoch = val_queue_item['epoch']
-            weights = val_queue_item['weights']
+        for p in workers:
+            p.join()
 
-            val_loss = loss(val, weights)
-
-            logging.warning("{}:EPOCH:{}".format(now(), epoch))
-            logging.warning("{}:VAL. LOSS:{}".format(now(), val_loss))
-            logs['epochs-stats'].append({'epoch_number': epoch,
-                                         'val_loss': val_loss})
-
-            # Early stopping criteria
-            persistence[epoch % PERSISTENCE] = val_loss
-            if smallest_val_loss < min(persistence):
-                # Early stop
-                logging.warning("{}:EARLY STOP!".format(now()))
-                # Terminate all workers, but save the weights before
-                # because a worker could have a lock on them. Terminating
-                # a worker doesn't release its lock.
-                final_weights = w[:]
-                for p in workers:
-                    p.terminate()
-                logs['end-compute-time'] = now()
-                logging.warning("{}:END TIME {}".format(now(),
-                                                        time()-start_time))
-                break
-            else:
-                smallest_val_loss = val_loss if val_loss < smallest_val_loss else smallest_val_loss
-
-        # Close queue
-        val_queue.close()
-        val_queue.join_thread()
+        logs['end-compute-time'] = now()
+        logging.warning("{}:END TIME {}".format(now(), time()-start_time))
 
         logging.warning("{}:Calculating Train Accuracy".format(now()))
-        train_accuracy = accuracy(train, final_weights)
+        train_accuracy = accuracy(train, w)
         logs['train_accuracy'] = train_accuracy
         logging.warning("{}:TRAIN ACC:{}".format(now(), train_accuracy))
 
         # Calculate test accuracy
         logging.warning("{}:Calculating Test Accuracy".format(now()))
         test = data.load_test(FULL_TEST)
-        test_accuracy = accuracy(test, final_weights)
+        test_accuracy = accuracy(test, w)
         logs['test_accuracy'] = test_accuracy
         logging.warning("{}:TEST ACC:{}".format(now(), test_accuracy))
 
         logs['end_time'] = now()
-        with open('logs/logs.w_{}.l_{}.e_{}.time_{}.json'
+        with open('logs-no-stopping/logs.w_{}.l_{}.e_{}.time_{}.json'
                   .format(WORKERS, LOCK, EPOCHS, logs['start-time']),
                   'w') as f:
             json.dump([logs], f)
 
 
-def sgd(worker, train, w, val_queue):
+def sgd(worker, train, w):
     samples = list(zip(train['features'], train['targets']))
     for epoch in range(EPOCHS):
         samples_batch = random.sample(samples, BATCH)
@@ -148,12 +101,6 @@ def sgd(worker, train, w, val_queue):
             # that already handles the synchronisation.
             for k, v in delta_w.items():
                 w[k] += LEARNING_RATE * v
-
-        # Calculate validation loss after each epoch (i.e. one batch)
-        # Put in controller's queue to calculate validation loss
-        val_queue.put_nowait({'worker': worker,
-                              'epoch': epoch,
-                              'weights': w[:]})
 
 
 def loss(data, w):

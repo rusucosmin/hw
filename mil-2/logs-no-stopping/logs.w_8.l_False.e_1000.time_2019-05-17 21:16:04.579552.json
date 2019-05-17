@@ -1,0 +1,1 @@
+[{"start-time": "2019-05-17 21:16:04.579552", "lock": false, "num_workers": 8, "reg_lambda": 1e-05, "epochs": 1000, "learning_rate": 0.01, "start-compute-time": "2019-05-17 21:16:09.434031", "epochs-stats": [], "end-compute-time": "2019-05-17 21:16:27.336965", "train_accuracy": 0.9621790256779458, "test_accuracy": 0.933877829507144, "end_time": "2019-05-17 21:16:45.344232"}]
